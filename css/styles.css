@@ -522,7 +522,14 @@ body.menu-open::after { opacity: 1; visibility: visible; pointer-events: auto; t
 .method-card h3 { font-size: 1.15rem; }
 
 /* ---------- Team page ---------- */
-.people { max-width: 1160px; }
+/* Compact banner + tighter spacing so the team starts near the top */
+.page-banner--compact { padding: 32px 0 30px; }
+.page-banner--compact .breadcrumb { margin-bottom: 10px; }
+.page-banner--compact h1 { font-size: clamp(2rem, 3.6vw, 2.6rem); margin-bottom: 6px; }
+.page-banner--compact p { font-size: 1.02rem; }
+.page-banner--compact .banner-mark { width: 200px; right: -30px; }
+.team-section { padding: 40px 0 24px; }
+.team-section--members { padding: 24px 0 64px; }.people { max-width: var(--container); }
 .people-heading { font-size: clamp(1.5rem, 2.4vw, 1.9rem); padding-bottom: 12px; border-bottom: 2px solid var(--scarlet); margin-bottom: 8px; }
 .person {
   --photo: 330px;
