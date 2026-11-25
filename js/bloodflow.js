@@ -41,8 +41,8 @@
   /* ---------- State ---------- */
   var DPR = 1, W = 0, H = 0, mobile = false;
   var R0 = 100, CS = 30, xJam = 0, targetCount = 100;
-  var vesselLayer = null, lumenPath = null, spr = null;
-  var cells = [], drawList = [], streaks = [], ripples = [], rings = [], motes = [], caustics = [];
+  var vesselLayer = null, lumenPath = null, spr = null, tintLayer = null, tintX = 0;
+  var cells = [], drawList = [], streaks = [], ripples = [], rings = [], motes = [];
   var mode = "crisis";
   var mouse = { x: -9999, y: -9999, active: false, energy: 0, lx: 0, ly: 0 };
   var hovered = null;
@@ -51,6 +51,8 @@
   var running = false, onScreen = true, lastT = 0;
   var MAX_LODGED = 14;
   var wbcTimer = 0, wbcNext = 0.6, wbcSeen = false;
+  // Adaptive quality: 2 = full, 1 = reduced, 0 = light. Drops automatically on slow devices.
+  var quality = 2, frameEma = 16, framesSeen = 0, qualityCheckAt = 120;
 
   /* ---------- Helpers ---------- */
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -359,6 +361,17 @@
 
     vesselLayer = c;
     lumenPath = lumen;
+
+    // low-oxygen tint layer: the part of the lumen downstream of the blockage, faded in from xJam
+    tintX = Math.max(0, Math.floor(xJam));
+    var tw = Math.max(1, Math.ceil((W - tintX) * DPR)), tl = makeCanvas(tw, Math.max(1, Math.round(H * DPR))), tg = tl.getContext("2d");
+    tg.scale(DPR, DPR); tg.translate(-tintX, 0);
+    var tgr = tg.createLinearGradient(xJam, 0, xJam + W * 0.12, 0);
+    tgr.addColorStop(0, "rgba(105,90,95,0)");
+    tgr.addColorStop(1, "rgba(105,90,95,0.34)");
+    tg.fillStyle = tgr;
+    tg.fill(lumen);
+    tintLayer = tl;
   }
 
   /* =========================================================
@@ -399,7 +412,8 @@
   function populate() {
     var area = 0;
     for (var x = 0; x < W; x += 10) area += rad(x) * 2 * 10;
-    targetCount = clamp(Math.round(area / (CS * CS * 1.9)), 40, mobile ? 90 : 190);
+    targetCount = clamp(Math.round(area / (CS * CS * 1.9)), 40, mobile ? 80 : 150);
+    targetCount = Math.round(targetCount * (quality === 2 ? 1 : quality === 1 ? 0.8 : 0.6));
     cells = [];
     for (var i = 0; i < targetCount; i++) cells.push(newCell(rand(-CS, W)));
     streaks = [];
@@ -407,9 +421,6 @@
     // tiny plasma particles (proteins, micro-bubbles of light) at different depths
     motes = [];
     for (var m = 0; m < (mobile ? 34 : 80); m++) motes.push({ x: rand(0, W), o: rand(-0.95, 0.95), r: rand(0.5, 1.9), a: rand(0.2, 0.6), k: rand(0.75, 1.25), ph: rand(0, 6) });
-    // soft light caustics drifting through the vessel
-    caustics = [];
-    for (var q = 0; q < (mobile ? 2 : 4); q++) caustics.push({ x: rand(0, W), o: rand(-0.45, 0.35), s: rand(0.7, 1.3), k: rand(0.25, 0.5) });
   }
 
   function lodge(c) {
@@ -568,11 +579,6 @@
       mo.ph += dt * 1.7;
       if (mo.x > W + 10) { mo.x = -rand(0, 40); mo.o = rand(-0.95, 0.95); }
     }
-    for (i = 0; i < caustics.length; i++) {
-      var cq = caustics[i];
-      cq.x += bs * cq.k * (1 - 0.6 * block) * dt;
-      if (cq.x - R0 * 2 > W) { cq.x = -R0 * 2; cq.o = rand(-0.45, 0.35); cq.s = rand(0.7, 1.3); }
-    }
 
     // pain-signal rings
     if (block > 0.35) {
@@ -724,29 +730,12 @@
 
     // the vessel itself is drawn once onto a separate background canvas (see buildVessel)
 
-    // effects that must stay inside the vessel: clip just for these few draws
-    if (block > 0.02 || caustics.length) {
-      ctx.save();
-      ctx.clip(lumenPath);
-      // low-oxygen tint downstream of the blockage
-      if (block > 0.02) {
-        var g = ctx.createLinearGradient(xJam, 0, xJam + W * 0.12, 0);
-        g.addColorStop(0, "rgba(105,90,95,0)");
-        g.addColorStop(1, "rgba(105,90,95," + (0.34 * block).toFixed(3) + ")");
-        ctx.fillStyle = g;
-        ctx.fillRect(xJam, 0, W - xJam, H);
-      }
-      // drifting light caustics
-      for (var i = 0; i < caustics.length; i++) {
-        var cq = caustics[i], cqr = rad(cq.x) * cq.s, cqy = cy(cq.x) + cq.o * rad(cq.x);
-        var cg = ctx.createRadialGradient(cq.x, cqy, 0, cq.x, cqy, cqr);
-        cg.addColorStop(0, "rgba(255,255,255,0.22)");
-        cg.addColorStop(0.5, "rgba(255,240,244,0.08)");
-        cg.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = cg;
-        ctx.fillRect(cq.x - cqr, cqy - cqr, cqr * 2, cqr * 2);
-      }
-      ctx.restore();
+    var i;
+    // low-oxygen tint downstream of the blockage (pre-rendered vessel-shaped layer)
+    if (block > 0.02 && tintLayer) {
+      ctx.globalAlpha = Math.min(1, block);
+      ctx.drawImage(tintLayer, tintX, 0, tintLayer.width / DPR, H);
+      ctx.globalAlpha = 1;
     }
 
     // plasma streaks
@@ -900,7 +889,8 @@
     W = w; H = h;
     DPR = Math.min(2, window.devicePixelRatio || 1);
     // keep the animated canvas to a sensible pixel count on very large / high-DPI screens
-    var maxPx = 3.2e6;
+    var maxPx = quality === 2 ? 2.2e6 : quality === 1 ? 1.3e6 : 0.8e6;
+    DPR = Math.min(DPR, quality === 2 ? 1.75 : quality === 1 ? 1.25 : 1);
     if (W * H * DPR * DPR > maxPx) DPR = Math.max(1, Math.sqrt(maxPx / (W * H)));
     canvas.width = bgCanvas.width = Math.round(W * DPR);
     canvas.height = bgCanvas.height = Math.round(H * DPR);
@@ -923,8 +913,20 @@
 
   function frame(t) {
     if (!running) return;
-    var dt = Math.min(0.033, Math.max(0.001, (t - lastT) / 1000));
+    var raw = t - lastT, dt = Math.min(0.033, Math.max(0.001, raw / 1000));
     lastT = t;
+    // watch real frame times; if they stay slow, step quality down (never up, to avoid flip-flopping)
+    if (raw > 0 && raw < 250) {
+      frameEma += (raw - frameEma) * 0.05;
+      if (++framesSeen > qualityCheckAt && frameEma > 24 && quality > 0) {
+        quality--; framesSeen = 0; frameEma = 16;
+        resize();                                   // smaller canvas, same scene
+        targetCount = Math.round(targetCount * 0.8);
+        if (cells.length > targetCount) {           // drop red cells first, keep the story cells
+          cells = cells.filter(function (c, i) { return c.type !== "rbc" || i % 5 !== 0; });
+        }
+      }
+    }
     step(dt);
     draw();
     requestAnimationFrame(frame);
