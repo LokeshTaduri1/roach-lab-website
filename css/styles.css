@@ -524,14 +524,22 @@ body.menu-open::after { opacity: 1; visibility: visible; pointer-events: auto; t
 /* ---------- Team page ---------- */
 /* Compact one-row banner + tight spacing so Dr. Powell-Roach's full profile
    is visible as soon as the Lab Members page opens */
-.page-banner--compact { padding: 22px 0; }
-.page-banner--compact .container { display: grid; grid-template-columns: auto 1fr; column-gap: 36px; align-items: center; }
+.page-banner--compact { padding: 20px 0; }
+.page-banner--compact .container { display: flex; align-items: center; justify-content: space-between; gap: 14px 32px; flex-wrap: wrap; }
 .page-banner--compact h1 { font-size: clamp(1.8rem, 3vw, 2.3rem); margin: 0; }
-.page-banner--compact p { font-size: 1rem; max-width: 620px; padding-left: 36px; border-left: 2px solid #f1c6d0; }
-@media (max-width: 760px) {
-  .page-banner--compact .container { grid-template-columns: 1fr; }
-  .page-banner--compact h1 { margin-bottom: 6px; }
-  .page-banner--compact p { padding-left: 0; border-left: 0; }
+.banner-jump { display: flex; flex-wrap: wrap; gap: 10px; }
+.banner-jump a {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 999px;
+  border: 1.5px solid #f1c6d0; background: #fff; color: var(--ink); font-weight: 600; font-size: .9rem;
+  transition: border-color .2s, color .2s, background .2s;
+}
+.banner-jump a:hover { border-color: var(--scarlet); color: var(--scarlet); }
+.banner-jump a.banner-jump-cta { background: var(--scarlet); border-color: var(--scarlet); color: #fff; }
+.banner-jump a.banner-jump-cta:hover { background: var(--scarlet-dark); border-color: var(--scarlet-dark); color: #fff; }
+@media (max-width: 600px) {
+  .page-banner--compact { padding: 16px 0 18px; }
+  .banner-jump { gap: 8px; }
+  .banner-jump a { padding: 6px 12px; font-size: .84rem; }
 }
 .team-section { padding: 26px 0 24px; }
 .team-section--members { padding: 24px 0 64px; }
