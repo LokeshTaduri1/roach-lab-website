@@ -119,10 +119,36 @@ ul { padding-left: 1.2em; }
 
 .site-menu {
   position: absolute; left: 0; right: 0; top: 100%; background: var(--navy-deep);
-  max-height: 0; overflow: hidden; visibility: hidden; transition: max-height .45s var(--ease), visibility .45s;
+  max-height: calc(100vh - 46px); overflow-y: auto; overscroll-behavior: contain;
   box-shadow: var(--shadow-lg);
+  /* closed: clipped away from the bottom up, faded out */
+  clip-path: inset(0 0 100% 0); opacity: 0; visibility: hidden;
+  transition: clip-path .42s cubic-bezier(.4, 0, .2, 1), opacity .3s ease .1s, visibility 0s linear .42s;
 }
-.site-menu.open { max-height: 90vh; overflow-y: auto; visibility: visible; }
+.site-menu.open {
+  clip-path: inset(0 0 0 0); opacity: 1; visibility: visible;
+  transition: clip-path .5s cubic-bezier(.2, .7, .2, 1), opacity .2s ease, visibility 0s;
+}
+/* menu contents drift in one column after another */
+.site-menu .site-search-menu, .site-menu-grid > * {
+  opacity: 0; transform: translateY(-8px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.site-menu.open .site-search-menu, .site-menu.open .site-menu-grid > * {
+  opacity: 1; transform: none;
+  transition: opacity .4s ease, transform .45s cubic-bezier(.2, .7, .2, 1);
+}
+.site-menu.open .site-search-menu { transition-delay: .08s; }
+.site-menu.open .site-menu-grid > :nth-child(1) { transition-delay: .12s; }
+.site-menu.open .site-menu-grid > :nth-child(2) { transition-delay: .18s; }
+.site-menu.open .site-menu-grid > :nth-child(3) { transition-delay: .24s; }
+/* dim the page behind the open menu */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 110; background: rgba(20, 8, 12, .38);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .35s ease, visibility 0s linear .35s;
+}
+body.menu-open::after { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .35s ease, visibility 0s; }
 .site-menu > .container { padding-top: 30px; padding-bottom: 36px; }
 .site-menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
 .site-menu h4 { font-family: var(--font-sans); color: #ffc9d4; font-size: .78rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
@@ -748,7 +774,21 @@ textarea.field { min-height: 140px; resize: vertical; }
 .reveal-delay-3 { transition-delay: .3s; }
 .no-js .reveal { opacity: 1; transform: none; }
 
+/* ---------- Page-to-page transitions ----------
+   Chrome, Edge and Safari: smooth cross-fade between pages (View Transitions).
+   Other browsers: the new page's content fades in on load. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: page-out .22s cubic-bezier(.4, 0, 1, 1) both; }
+::view-transition-new(root) { animation: page-in .38s cubic-bezier(.2, .7, .2, 1) .06s both; }
+@keyframes page-out { to { opacity: 0; } }
+@keyframes page-in { from { opacity: 0; } }
+@keyframes main-in { from { opacity: 0; transform: translateY(12px); } }
+@supports not (view-transition-name: none) {
+  main { animation: main-in .45s cubic-bezier(.2, .7, .2, 1) both; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
   .reveal { opacity: 1; transform: none; }
 }
