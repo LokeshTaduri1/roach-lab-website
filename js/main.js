@@ -23,7 +23,29 @@
     toggle.addEventListener("click", function () {
       setOpen(toggle.getAttribute("aria-expanded") !== "true");
     });
-    $$("a", menu).forEach(function (a) { a.addEventListener("click", function () { setOpen(false); }); });
+    // Clicking a menu link: let the menu glide shut first, then go to the page
+    // (the page itself then cross-fades in), instead of jumping instantly.
+    var reduceMotionMenu = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    $$("a", menu).forEach(function (a) {
+      a.addEventListener("click", function (e) {
+        var href = a.getAttribute("href") || "";
+        var external = a.target === "_blank" || /^(https?:|mailto:|tel:)/i.test(href);
+        var modified = e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0;
+        if (external || modified || reduceMotionMenu) { setOpen(false); return; }
+        e.preventDefault();
+        setOpen(false);
+        var url = new URL(href, window.location.href);
+        var samePage = url.pathname === window.location.pathname && url.search === window.location.search;
+        setTimeout(function () {
+          if (samePage && url.hash) {
+            var target = document.getElementById(decodeURIComponent(url.hash.slice(1)));
+            if (target) { target.scrollIntoView({ behavior: "smooth" }); history.pushState(null, "", url.hash); return; }
+          }
+          if (samePage && !url.hash) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+          window.location.href = url.href;
+        }, 280);
+      });
+    });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") setOpen(false); });
     document.addEventListener("click", function (e) {
       if (menu.classList.contains("open") && uniBar && !uniBar.contains(e.target)) setOpen(false);
