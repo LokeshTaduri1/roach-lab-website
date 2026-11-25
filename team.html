@@ -120,103 +120,97 @@
       </div>
     </section>
 
-    <section class="section section-soft" id="pi">
-      <div class="container">
-        <div class="pi-feature reveal">
-          <figure class="pi-portrait">
-            <img src="assets/people/dr-keesha-roach.jpg" alt="Portrait of Dr. Keesha Roach, Principal Investigator of the Powell-Roach Lab" width="400" height="400" decoding="async">
-          </figure>
-          <div>
-            <span class="eyebrow">Principal Investigator</span>
-            <h2>Dr. Keesha Roach</h2>
-            <div class="role">Rutgers University</div>
+    <!--
+      TEAM LIST
+      Photos: save each photo in assets/people/ with the file name used in its <img src>.
+              Until a photo exists, the person's initials are shown instead.
+      LinkedIn: replace href="#" with the full profile URL (https://www.linkedin.com/in/...).
+                The LinkedIn icon stays hidden while the link is "#".
+      Research interests: the short descriptions below are drafts; confirm them with each person.
+    -->
+    <section class="section" id="pi">
+      <div class="container people">
+        <h2 class="people-heading">Principal Investigator</h2>
+
+        <article class="person person--pi">
+          <div class="person-photo" data-initials="KR">
+            <img src="assets/people/dr-keesha-roach.jpg" alt="Portrait of Dr. Keesha Roach" width="400" height="400" decoding="async" onerror="this.parentNode.classList.add('no-photo');this.remove()">
+          </div>
+          <div class="person-body">
+            <h3>Dr. Keesha Roach</h3>
+            <p class="person-role">Principal Investigator · Rutgers University</p>
             <!-- TODO: Replace with Dr. Roach's official biography -->
             <p>Dr. Keesha Roach leads the Powell-Roach Lab at Rutgers University. Her research focuses on pain in sickle cell disease: how it is experienced, measured and treated. She aims to improve quality of life and health equity for people living with SCD.</p>
-            <p>Her work draws on clinical, behavioral and community-engaged methods to create patient-centered strategies for assessing and managing acute and chronic pain.</p>
-            <div class="tag-row" style="justify-content:flex-start">
-              <span class="tag">Sickle cell disease</span>
-              <span class="tag">Acute &amp; chronic pain</span>
-              <span class="tag">Patient-reported outcomes</span>
-              <span class="tag">Health equity</span>
-            </div>
-            <div class="pi-links">
-              <a href="mailto:powell-roach_lab@sn.rutgers.edu" class="btn btn-primary">Email</a>
-              <a href="publications.html" class="btn btn-outline">Publications</a>
-              <a href="#" class="btn btn-outline">CV (PDF)</a>
-            </div>
+            <p><strong>Research interests:</strong> sickle cell disease, acute and chronic pain, patient-reported outcomes, health equity.</p>
+            <ul class="person-links">
+              <li><a href="mailto:powell-roach_lab@sn.rutgers.edu" aria-label="Email Dr. Keesha Roach"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>Email</a></li>
+              <li><a href="#" target="_blank" rel="noopener" aria-label="Dr. Keesha Roach on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>LinkedIn</a></li>
+              <li><a href="publications.html">Publications</a></li>
+            </ul>
           </div>
-        </div>
+        </article>
       </div>
     </section>
 
-    <section class="section" id="members">
-      <div class="container">
-        <div class="section-head reveal">
-          <span class="eyebrow">Lab members</span>
-          <h2>Students &amp; researchers</h2>
-          <p>Click a team member to read their bio.</p>
-        </div>
+    <section class="section" id="members" style="padding-top:0">
+      <div class="container people">
+        <h2 class="people-heading">Lab Members</h2>
 
-        <div class="filter-bar" role="group" aria-label="Filter team members">
-          <button class="filter-btn active" data-filter="all" aria-pressed="true">All</button>
-          <button class="filter-btn" data-filter="staff" aria-pressed="false">Postdocs &amp; Staff</button>
-          <button class="filter-btn" data-filter="grad" aria-pressed="false">Graduate Students</button>
-          <button class="filter-btn" data-filter="undergrad" aria-pressed="false">Undergraduates</button>
-          <button class="filter-btn" data-filter="alumni" aria-pressed="false">Alumni</button>
-        </div>
+        <article class="person">
+          <div class="person-photo" data-initials="JB">
+            <img src="assets/people/jeanene-barrett.jpg" alt="Portrait of Dr. Jeanene Barrett" width="300" height="300" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('no-photo');this.remove()">
+          </div>
+          <div class="person-body">
+            <h3>Dr. Jeanene Barrett</h3>
+            <p class="person-role">Coadjutant Casual-R</p>
+            <p><strong>Research interests:</strong> pain management and quality of care for people living with sickle cell disease, with a focus on how clinical practice and care delivery shape patients' experiences of pain and on translating research findings into practical improvements in everyday care.</p>
+            <ul class="person-links">
+              <li><a href="#" target="_blank" rel="noopener" aria-label="Dr. Jeanene Barrett on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>LinkedIn</a></li>
+            </ul>
+          </div>
+        </article>
 
-        <!-- TODO: Replace the placeholder members below with real lab members.
-             data-group: staff | grad | undergrad | alumni   ·   data-bio: text shown in the popup -->
-        <div class="grid grid-4">
-          <button class="member reveal" data-group="staff" data-bio="Add a short bio here: background, research interests and current projects in the lab.">
-            <div class="avatar av-2" aria-hidden="true">PD</div>
-            <h3>Postdoc Name</h3>
-            <div class="role">Postdoctoral Fellow</div>
-            <p class="focus">Chronic pain trajectories</p>
-          </button>
-          <button class="member reveal reveal-delay-1" data-group="staff" data-bio="Add a short bio here: role in the lab, study coordination and participant recruitment.">
-            <div class="avatar av-4" aria-hidden="true">RC</div>
-            <h3>Coordinator Name</h3>
-            <div class="role">Research Coordinator</div>
-            <p class="focus">Study operations</p>
-          </button>
-          <button class="member reveal reveal-delay-2" data-group="grad" data-bio="Add a short bio here: program, year, and dissertation topic.">
-            <div class="avatar av-1" aria-hidden="true">GS</div>
-            <h3>Graduate Student</h3>
-            <div class="role">PhD Student</div>
-            <p class="focus">Sleep and pain</p>
-          </button>
-          <button class="member reveal reveal-delay-3" data-group="grad" data-bio="Add a short bio here: program, year, and research interests.">
-            <div class="avatar av-3" aria-hidden="true">GS</div>
-            <h3>Graduate Student</h3>
-            <div class="role">Master's Student</div>
-            <p class="focus">Digital symptom tracking</p>
-          </button>
-          <button class="member reveal" data-group="undergrad" data-bio="Add a short bio here: major, year, and what they work on in the lab.">
-            <div class="avatar av-2" aria-hidden="true">UR</div>
-            <h3>Undergraduate Name</h3>
-            <div class="role">Research Assistant</div>
-            <p class="focus">Data collection</p>
-          </button>
-          <button class="member reveal reveal-delay-1" data-group="undergrad" data-bio="Add a short bio here: major, year, and what they work on in the lab.">
-            <div class="avatar av-1" aria-hidden="true">UR</div>
-            <h3>Undergraduate Name</h3>
-            <div class="role">Research Assistant</div>
-            <p class="focus">Literature reviews</p>
-          </button>
-          <button class="member reveal reveal-delay-2" data-group="alumni" data-bio="Add where this alum is now and what they worked on in the lab.">
-            <div class="avatar av-4" aria-hidden="true">AL</div>
-            <h3>Alumni Name</h3>
-            <div class="role">Former Research Assistant</div>
-            <p class="focus">Now: Medical school</p>
-          </button>
-          <button class="member reveal reveal-delay-3" data-group="alumni" data-bio="Add where this alum is now and what they worked on in the lab.">
-            <div class="avatar av-3" aria-hidden="true">AL</div>
-            <h3>Alumni Name</h3>
-            <div class="role">Former Graduate Student</div>
-            <p class="focus">Now: Postdoctoral researcher</p>
-          </button>
-        </div>
+        <article class="person">
+          <div class="person-photo" data-initials="AI">
+            <img src="assets/people/ashley-iwu.jpg" alt="Portrait of Ashley Iwu" width="300" height="300" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('no-photo');this.remove()">
+          </div>
+          <div class="person-body">
+            <h3>Ashley Iwu <span class="person-pronouns">(she/her)</span></h3>
+            <p class="person-role">Research Project Coordinator II · Nursing Science</p>
+            <p><strong>Research interests:</strong> study coordination, participant recruitment and community engagement in sickle cell disease research. She oversees day-to-day study operations and works closely with participants and community partners so that studies run smoothly and reflect the needs of the SCD community.</p>
+            <ul class="person-links">
+              <li><a href="#" target="_blank" rel="noopener" aria-label="Ashley Iwu on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>LinkedIn</a></li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="person">
+          <div class="person-photo" data-initials="LT">
+            <img src="assets/people/lokesh-taduri.jpg" alt="Portrait of Lokesh Taduri" width="300" height="300" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('no-photo');this.remove()">
+          </div>
+          <div class="person-body">
+            <h3>Lokesh Taduri</h3>
+            <p class="person-role">PhD Student · Biomedical Informatics and Health AI</p>
+            <p><strong>Research interests:</strong> applying data science and artificial intelligence to understand and predict pain in sickle cell disease, using clinical and patient-reported data to build models that can identify patterns in pain and support more personalized, timely care.</p>
+            <ul class="person-links">
+              <li><a href="#" target="_blank" rel="noopener" aria-label="Lokesh Taduri on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>LinkedIn</a></li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="person">
+          <div class="person-photo" data-initials="HJ">
+            <img src="assets/people/hyejin-jeon.jpg" alt="Portrait of Hyejin Jeon" width="300" height="300" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('no-photo');this.remove()">
+          </div>
+          <div class="person-body">
+            <h3>Hyejin Jeon</h3>
+            <p class="person-role">PhD Student · Nursing Science</p>
+            <p><strong>Research interests:</strong> nursing approaches to pain assessment and symptom management in sickle cell disease, including how patient-reported outcomes and nurse-led interventions can improve the recognition and treatment of pain and support better quality of life.</p>
+            <ul class="person-links">
+              <li><a href="#" target="_blank" rel="noopener" aria-label="Hyejin Jeon on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>LinkedIn</a></li>
+            </ul>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -234,15 +228,6 @@
       </div>
     </section>
 
-    <div class="modal" id="member-modal" role="dialog" aria-modal="true" aria-labelledby="modal-name" aria-hidden="true">
-      <div class="modal-dialog">
-        <button class="modal-close" type="button" aria-label="Close">&times;</button>
-        <div class="avatar" aria-hidden="true"></div>
-        <h3 id="modal-name"></h3>
-        <div class="role"></div>
-        <p id="modal-bio"></p>
-      </div>
-    </div>
   </main>
 
   <footer class="site-footer">

@@ -496,55 +496,47 @@ ul { padding-left: 1.2em; }
 .method-card h3 { font-size: 1.15rem; }
 
 /* ---------- Team page ---------- */
-.filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 36px; }
-.filter-btn {
-  border: 1.5px solid var(--line); background: #fff; color: var(--ink); padding: 9px 20px;
-  border-radius: 999px; font-weight: 600; font-size: .92rem; cursor: pointer; font-family: inherit; transition: all .2s;
+.people { max-width: 1000px; }
+.people-heading { font-size: clamp(1.5rem, 2.4vw, 1.9rem); padding-bottom: 12px; border-bottom: 2px solid var(--scarlet); margin-bottom: 8px; }
+.person {
+  --photo: 240px;
+  display: grid; grid-template-columns: var(--photo) 1fr; gap: 36px; align-items: start;
+  padding: 36px 0; border-bottom: 1px solid var(--line);
 }
-.filter-btn:hover { border-color: var(--scarlet); color: var(--scarlet); }
-.filter-btn.active { background: var(--scarlet); border-color: var(--scarlet); color: #fff; }
-
-.pi-feature {
-  display: grid; grid-template-columns: minmax(0, 400px) 1fr; gap: 64px; align-items: center;
-  background: #fff; border-radius: 22px; padding: clamp(28px, 4vw, 48px); box-shadow: var(--shadow);
+.person:last-child { border-bottom: 0; }
+.person--pi { --photo: 320px; }
+.person-photo { width: var(--photo); aspect-ratio: 1; border-radius: 0; overflow: hidden; background: var(--soft); }
+.person-photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
+.person-photo.no-photo {
+  display: grid; place-items: center; background: var(--scarlet-soft); color: var(--scarlet);
+  font-family: var(--font-serif); font-weight: 700; font-size: calc(var(--photo) * .3);
 }
-.pi-feature .avatar { width: 100%; aspect-ratio: 1; font-size: 5rem; border-radius: 20px; position: relative; overflow: hidden; }
-.pi-feature .avatar::after {
-  content: ""; position: absolute; inset: auto -30% -40% auto; width: 80%; aspect-ratio: 1; border-radius: 50%;
-  background: rgba(255,255,255,.14);
+.person-photo.no-photo::before { content: attr(data-initials); }
+.person-body h3 { font-size: 1.35rem; margin-bottom: 4px; }
+.person--pi .person-body h3 { font-size: 1.6rem; }
+.person-pronouns { font-family: var(--font-sans); font-size: .9rem; font-weight: 400; color: var(--muted); }
+.person-role { color: var(--scarlet); font-weight: 600; margin-bottom: 14px; }
+.person-body p { color: var(--muted); }
+.person-body p strong { color: var(--ink); }
+.person-links { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.person-links a { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: .95rem; color: var(--scarlet); }
+.person-links a:hover { color: var(--scarlet-dark); text-decoration: underline; }
+.person-links svg { width: 18px; height: 18px; flex-shrink: 0; }
+.person-links a[href="#"] { display: none; } /* LinkedIn stays hidden until a real URL is added */
+@media (max-width: 860px) {
+  .person { --photo: 190px; gap: 26px; }
+  .person--pi { --photo: 240px; }
 }
-.pi-feature .role { color: var(--scarlet); font-weight: 600; margin-bottom: 18px; }
-.pi-feature p { color: var(--muted); }
-.pi-links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
-.pi-portrait { margin: 0 18px 18px 0; position: relative; }
-.pi-portrait::before {
-  content: ""; position: absolute; inset: 18px -18px -18px 18px; border: 3px solid var(--scarlet); border-radius: 22px; z-index: 0;
+@media (max-width: 600px) {
+  .person { --photo: 130px; gap: 18px; padding: 28px 0; }
+  .person--pi { --photo: 160px; }
+  .person-body h3, .person--pi .person-body h3 { font-size: 1.2rem; }
 }
-.pi-portrait img {
-  position: relative; z-index: 1; display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; object-position: 50% 30%;
-  border-radius: 20px; box-shadow: var(--shadow-lg);
+@media (max-width: 420px) {
+  .person { --photo: 110px; gap: 14px; }
+  .person--pi { --photo: 130px; }
+  .person-body h3, .person--pi .person-body h3 { font-size: 1.1rem; }
 }
-@media (max-width: 960px) { .pi-feature { grid-template-columns: minmax(0, 320px) 1fr; gap: 48px; } }
-@media (max-width: 820px) {
-  .pi-feature { grid-template-columns: 1fr; gap: 36px; }
-  .pi-portrait { max-width: 400px; width: calc(100% - 18px); }
-}
-
-.member {
-  background: #fff; border-radius: var(--radius); border: 1px solid var(--line); padding: 30px 22px 26px; text-align: center;
-  cursor: pointer; transition: transform .3s var(--ease), box-shadow .3s; font-family: inherit; color: inherit; width: 100%;
-}
-.member:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
-.member .avatar { width: 96px; height: 96px; font-size: 1.9rem; margin: 0 auto 16px; transition: transform .3s; }
-.member:hover .avatar { transform: scale(1.06); }
-.member h3 { font-size: 1.12rem; margin-bottom: 4px; }
-.member .role { color: var(--scarlet); font-size: .88rem; font-weight: 600; }
-.member .focus { color: var(--muted); font-size: .88rem; margin-top: 8px; }
-.member.hide { display: none; }
-.av-1 { background: linear-gradient(135deg, #cc0033, #7a0020); }
-.av-2 { background: linear-gradient(135deg, #e8324f, #a00028); }
-.av-3 { background: linear-gradient(135deg, #a00028, #5c0018); }
-.av-4 { background: linear-gradient(135deg, #ff5c78, #cc0033); }
 
 /* ---------- Full-width group photo slider (home) ---------- */
 .photo-strip { position: relative; overflow: hidden; height: clamp(260px, 42.86vw, 680px); background: #1c1517; }
@@ -627,27 +619,6 @@ ul { padding-left: 1.2em; }
 .join-links a::after { content: "▸"; font-size: .8rem; transition: transform .2s; }
 .join-links a:hover { color: #fff; }
 .join-links a:hover::after { transform: translateX(4px); }
-
-/* Modal */
-.modal {
-  position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; padding: 16px;
-  background: rgba(40,0,10,.6); backdrop-filter: blur(4px);
-  opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s;
-}
-.modal.open { opacity: 1; visibility: visible; }
-.modal-dialog {
-  background: #fff; border-radius: 20px; max-width: 520px; width: 100%; padding: 40px 32px 32px; position: relative;
-  transform: translateY(20px) scale(.97); transition: transform .35s var(--ease); max-height: 90vh; overflow-y: auto; text-align: center;
-}
-.modal.open .modal-dialog { transform: none; }
-.modal-close {
-  position: absolute; top: 14px; right: 14px; width: 40px; height: 40px; border-radius: 50%; border: 0;
-  background: var(--soft); cursor: pointer; font-size: 1.4rem; line-height: 1; color: var(--ink);
-}
-.modal-close:hover { background: var(--scarlet); color: #fff; }
-.modal .avatar { width: 100px; height: 100px; font-size: 2rem; margin: 0 auto 16px; }
-.modal .role { color: var(--scarlet); font-weight: 600; margin-bottom: 14px; }
-.modal p { color: var(--muted); text-align: left; }
 
 /* ---------- Publications ---------- */
 .pub-tools {

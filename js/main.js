@@ -41,7 +41,7 @@
     { t: "Patient-reported outcomes & digital health", u: "research.html#outcomes", k: "mobile app diary ema symptom tracking self-management digital" },
     { t: "Health equity & access to care", u: "research.html#equity", k: "stigma bias emergency department transition community advocacy" },
     { t: "About the PI: Dr. Keesha Roach", u: "team.html#pi", k: "principal investigator professor keesha roach bio cv faculty" },
-    { t: "Lab members", u: "team.html#members", k: "team people students postdoc coordinator alumni undergraduates graduate" },
+    { t: "Lab members", u: "team.html#members", k: "team people members students coordinator graduate phd jeanene barrett ashley iwu lokesh taduri hyejin jeon" },
     { t: "Publications", u: "publications.html", k: "papers articles journal pubmed research output" },
     { t: "Join the lab", u: "join.html", k: "join positions opportunities undergraduate graduate phd postdoc apply jobs" },
     { t: "Volunteer for a research study", u: "join.html#participate", k: "volunteer participate study patients families sickle cell research participation" },
@@ -350,50 +350,6 @@
       if (p) p.style.maxHeight = p.scrollHeight + "px";
     });
   });
-
-  /* ---------- Team filter + modal ---------- */
-  var filterBtns = $$(".filter-btn[data-filter]");
-  if (filterBtns.length) {
-    filterBtns.forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var f = btn.getAttribute("data-filter");
-        filterBtns.forEach(function (b) { b.classList.toggle("active", b === btn); b.setAttribute("aria-pressed", String(b === btn)); });
-        $$(".member").forEach(function (m) {
-          m.classList.toggle("hide", f !== "all" && m.getAttribute("data-group") !== f);
-        });
-      });
-    });
-  }
-
-  var modal = $("#member-modal");
-  if (modal) {
-    var lastFocus = null;
-    var closeModal = function () {
-      modal.classList.remove("open");
-      modal.setAttribute("aria-hidden", "true");
-      document.body.style.overflow = "";
-      if (lastFocus) lastFocus.focus();
-    };
-    $$(".member").forEach(function (m) {
-      m.addEventListener("click", function () {
-        lastFocus = m;
-        var av = $(".avatar", m);
-        var mAv = $(".avatar", modal);
-        mAv.textContent = av.textContent;
-        mAv.className = av.className;
-        $("#modal-name", modal).textContent = $("h3", m).textContent;
-        $(".role", modal).textContent = $(".role", m).textContent;
-        $("#modal-bio", modal).textContent = m.getAttribute("data-bio") || "";
-        modal.classList.add("open");
-        modal.setAttribute("aria-hidden", "false");
-        document.body.style.overflow = "hidden";
-        $(".modal-close", modal).focus();
-      });
-    });
-    $(".modal-close", modal).addEventListener("click", closeModal);
-    modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
-    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && modal.classList.contains("open")) closeModal(); });
-  }
 
   /* ---------- Publications ---------- */
   var pubList = $("#pub-list");

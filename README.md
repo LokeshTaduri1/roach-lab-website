@@ -27,7 +27,9 @@ assets/logo-full-dark.png Same, for dark backgrounds
 | Lab email | done: `powell-roach_lab@sn.rutgers.edu` (footer, `team.html`, `contact.html` and the form's `data-email`) |
 | Phone | `contact.html` (address is done) |
 | Dr. Roach's official bio and CV link | `team.html` (`#pi` section) |
-| Lab members (names, roles, bios) | `team.html`: each `<button class="member">` |
+| Lab member photos | `assets/people/jeanene-barrett.jpg`, `ashley-iwu.jpg`, `lokesh-taduri.jpg`, `hyejin-jeon.jpg` (square crops; initials show until added) |
+| LinkedIn links | `team.html`: replace each `href="#"` on the LinkedIn links (the icon stays hidden until then) |
+| Research-interest blurbs | `team.html`: drafts, confirm with each person |
 | Publications (current entries are **samples**) | `js/publications-data.js` |
 | News items | `index.html` (`#news` section) |
 | Department or school name | top bar in each page, if you want to show it |
