@@ -25,7 +25,7 @@ assets/logo-full-dark.png Same, for dark backgrounds
 | What | Where |
 |---|---|
 | Lab email | done: `powell-roach_lab@sn.rutgers.edu` (footer, `team.html`, `contact.html` and the form's `data-email`) |
-| Address and phone | `contact.html` |
+| Phone | `contact.html` (address is done) |
 | Dr. Roach's official bio and CV link | `team.html` (`#pi` section) |
 | Lab members (names, roles, bios) | `team.html`: each `<button class="member">` |
 | Publications (current entries are **samples**) | `js/publications-data.js` |
