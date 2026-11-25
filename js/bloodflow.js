@@ -43,6 +43,7 @@
   var block = 0, lodgedCount = 0, flowShown = 100;
   var running = false, onScreen = true, lastT = 0;
   var MAX_LODGED = 14;
+  var wbcTimer = 0, wbcNext = 0.6, wbcSeen = false;
 
   /* ---------- Helpers ---------- */
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -212,7 +213,7 @@
      thick rim, as in real blood). Frames are generated in small idle
      slices; until they are ready the painted sprites above are used.
      ========================================================= */
-  var spr3d = { rbc: null, rbcSoft: null, sickle: null, plt: null, bokeh: null, bokehSickle: null };
+  var spr3d = { rbc: null, rbcSoft: null, sickle: null, plt: null, wbc: null, bokeh: null, bokehSickle: null };
   var F3 = 144, SS3 = 2;
 
   function norm3(v) { var l = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }
@@ -299,7 +300,79 @@
     return seal(m);
   }
 
+  // White blood cell: a sphere covered in membrane ruffles (microvilli)
+  function computeNormals(m) {
+    var n = new Array(m.p.length).fill(0), P = m.p, I = m.i, t, k;
+    for (t = 0; t < I.length; t += 3) {
+      var a = I[t] * 3, b = I[t + 1] * 3, c = I[t + 2] * 3;
+      var ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2];
+      var vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+      var fx = uy * vz - uz * vy, fy = uz * vx - ux * vz, fz = ux * vy - uy * vx;
+      [a, b, c].forEach(function (q) { n[q] += fx; n[q + 1] += fy; n[q + 2] += fz; });
+    }
+    for (k = 0; k < n.length; k += 3) {
+      var v = norm3([n[k], n[k + 1], n[k + 2]]);
+      if (v[0] * P[k] + v[1] * P[k + 1] + v[2] * P[k + 2] < 0) v = [-v[0], -v[1], -v[2]]; // point outward
+      n[k] = v[0]; n[k + 1] = v[1]; n[k + 2] = v[2];
+    }
+    m.n = n;
+  }
+  function wbcMesh() {
+    var m = newMesh(), NA = 56, NB = 100;
+    // isotropic 3-D noise (sum of waves in random directions) so the ruffles are even everywhere
+    var waves = [];
+    for (var w = 0; w < 14; w++) {
+      var d = norm3([rand(-1, 1), rand(-1, 1), rand(-1, 1)]);
+      waves.push({ d: d, f: rand(7, 16), ph: rand(0, 6.28), a: w < 6 ? 0.22 : 0.12 });
+    }
+    function field(x, y, z) {
+      var s = 0;
+      for (var q = 0; q < waves.length; q++) { var W0 = waves[q]; s += W0.a * Math.sin(W0.f * (W0.d[0] * x + W0.d[1] * y + W0.d[2] * z) + W0.ph); }
+      return s;
+    }
+    for (var i = 0; i <= NA; i++) {
+      var th = (i / NA) * Math.PI, st = Math.sin(th), ct = Math.cos(th);
+      for (var j = 0; j < NB; j++) {
+        var ph = (j / NB) * Math.PI * 2;
+        // poles point left/right (x axis) so they never face the viewer
+        var dx = ct, dy = st * Math.cos(ph), dz = st * Math.sin(ph);
+        var bump = field(dx, dy, dz);
+        var r = 1 + 0.05 * bump;
+        m.p.push(dx * r, dy * r, dz * r);
+        m.a.push(0.5 + bump, Math.max(0, Math.sin(31 * dx + 5) * Math.sin(29 * dy + 1) * Math.sin(27 * dz + 3)));
+      }
+    }
+    gridIdx(m, 0, NA + 1, NB);
+    computeNormals(m);
+    return seal(m);
+  }
+  // Multi-lobed nucleus (neutrophil), seen through the translucent cell body
+  function nucleusMesh() {
+    var m = newMesh(), lobes = [[-0.34, 0.1, 0.05, 0.3], [0.02, -0.2, 0.02, 0.33], [0.34, 0.12, -0.04, 0.28], [-0.13, -0.02, 0, 0.18], [0.18, -0.03, 0, 0.17]];
+    lobes.forEach(function (L) {
+      var base = m.p.length / 3, NA = 16, NB = 28;
+      for (var i = 0; i <= NA; i++) {
+        var th = (i / NA) * Math.PI;
+        for (var j = 0; j < NB; j++) {
+          var ph = (j / NB) * Math.PI * 2, dx = Math.sin(th) * Math.cos(ph), dy = Math.sin(th) * Math.sin(ph), dz = Math.cos(th);
+          m.p.push(L[0] + dx * L[3], L[1] + dy * L[3] * 0.85, L[2] + dz * L[3] * 0.8);
+          var nn = norm3([dx, dy / 0.85, dz / 0.8]);
+          m.n.push(nn[0], nn[1], nn[2]);
+          m.a.push(0, 0);
+        }
+      }
+      gridIdx(m, base, NA + 1, NB);
+    });
+    return seal(m);
+  }
+
   function rotX(t) { var c = Math.cos(t), s = Math.sin(t); return [1, 0, 0, 0, c, -s, 0, s, c]; }
+  function rotZ(t) { var c = Math.cos(t), s = Math.sin(t); return [c, -s, 0, s, c, 0, 0, 0, 1]; }
+  function mulM(A, B) {
+    var R = [];
+    for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) R.push(A[r * 3] * B[c] + A[r * 3 + 1] * B[3 + c] + A[r * 3 + 2] * B[6 + c]);
+    return R;
+  }
 
   // Software rasterizer: z-buffered triangles, front + back depth (for real
   // thickness), interpolated normals, deferred per-pixel shading.
@@ -404,20 +477,46 @@
     tint: function (gr) { return Math.min(1, gr * gr * 4) * 0.38; }, tintC: [170, 90, 140]
   });
 
+  var MAT_WBC = material({
+    thin: [255, 247, 249], thick: [232, 212, 224], k: 1.1, minT: 0.05,
+    amb: 0.34, kd: 0.72, kf: 0.24, ks: 0.32, gloss: 38, sheen: 0.06,
+    rim: [40, 30, 42], glow: 0.08, glowC: [255, 230, 240],
+    ao: function (bump) { return 0.9 + 0.1 * bump; },
+    tint: function (bump, gran) { return gran > 0.82 ? 0.22 : 0; }, tintC: [200, 150, 190]
+  });
+  var MAT_NUC = material({
+    thin: [196, 128, 200], thick: [112, 50, 140], k: 3.2, minT: 0.1,
+    amb: 0.4, kd: 0.65, kf: 0.2, ks: 0.15, gloss: 20, sheen: 0,
+    rim: [0, 0, 0], glow: 0, glowC: [0, 0, 0]
+  });
+
   // Downsample the supersampled render and bake a soft contact shadow under it
-  function finishSprite(big) {
-    var c = makeCanvas(F3, F3), g = c.getContext("2d");
+  function finishSprite(big, size) {
+    var F = size || F3;
+    var c = makeCanvas(F, F), g = c.getContext("2d");
     g.imageSmoothingEnabled = true;
     if ("imageSmoothingQuality" in g) g.imageSmoothingQuality = "high";
     if ("filter" in g) {
       g.save();
-      g.filter = "blur(" + (F3 * 0.03).toFixed(1) + "px) brightness(0)";
+      g.filter = "blur(" + (F * 0.03).toFixed(1) + "px) brightness(0)";
       g.globalAlpha = 0.26;
-      g.drawImage(big, F3 * 0.012, F3 * 0.04, F3, F3);
+      g.drawImage(big, F * 0.012, F * 0.04, F, F);
       g.restore();
     }
-    g.drawImage(big, 0, 0, F3, F3);
+    g.drawImage(big, 0, 0, F, F);
     return c;
+  }
+  // White blood cell frame: ruffled membrane with the lobed nucleus showing through
+  function wbcFrame(mem, nuc, M, F) {
+    var S = F * SS3, body = rasterize(mem, M, S, S * 0.4, MAT_WBC), core = rasterize(nuc, M, S, S * 0.4, MAT_NUC);
+    var g = body.getContext("2d");
+    g.save();
+    g.globalCompositeOperation = "source-atop";
+    g.globalAlpha = 0.5;
+    if ("filter" in g) g.filter = "blur(" + (S * 0.008).toFixed(1) + "px)";
+    g.drawImage(core, 0, 0);
+    g.restore();
+    return finishSprite(body, F);
   }
   function blurred(src, px) {
     var c = makeCanvas(src.width, src.height), g = c.getContext("2d");
@@ -454,6 +553,13 @@
       tasks.push(function () { plt[p] = finishSprite(rasterize(pltM, rotX((p / N_PLT) * Math.PI), S, S * 0.36, MAT_PLT)); });
     })(p);
     tasks.push(function () { spr3d.plt = plt; if (!running) draw(); });
+    // white blood cell: rolling frames (rotation about the view axis, lighting stays fixed)
+    var wbc = [], wM = null, nM = null, N_WBC = 32, FW = Math.round(F3 * 1.4);
+    tasks.push(function () { wM = wbcMesh(); nM = nucleusMesh(); });
+    for (var w = 0; w < N_WBC; w++) (function (w) {
+      tasks.push(function () { wbc[w] = wbcFrame(wM, nM, mulM(rotX(0.35), rotZ((w / N_WBC) * Math.PI * 2)), FW); });
+    })(w);
+    tasks.push(function () { spr3d.wbc = wbc; });
 
     (function pump() {
       var t0 = performance.now();
@@ -598,10 +704,21 @@
       variant: (Math.random() * SICKLE_VARIANTS.length) | 0, flip: Math.random() < 0.5 ? -1 : 1,
       lodged: false, lodgeAngle: 0, heal: 0
     };
+    if (type === "wbc") {
+      // white blood cell: larger, mid-depth, rolls along one wall of the vessel
+      c.z = 0.5;
+      c.size = CS * 2.2;
+      c.side = Math.random() < 0.6 ? 1 : -1;
+      c.roll = rand(0, 6.28);
+      c.vx = baseSpeed() * 0.25;
+      c.o = c.side * Math.max(0, rad(x) - c.size * 0.42);
+      return c;
+    }
     var lim = Math.max(0, rad(x) - c.size * 0.45);
     c.o = rand(-lim, lim);
     return c;
   }
+  function hasWbc() { for (var i = 0; i < cells.length; i++) if (cells[i].type === "wbc") return true; return false; }
 
   function populate() {
     var area = 0;
@@ -690,6 +807,19 @@
       }
       if (c.lodged) continue;
 
+      if (c.type === "wbc") {
+        // rolls slowly along the vessel wall (leukocyte rolling), held near the wall
+        var wr = Math.max(1, rad(c.x)), wslow = c.x < xJam + 10 ? 1 - 0.92 * block * smooth(0, xJam, c.x) : 1;
+        c.vx += (bs * 0.4 * wslow - c.vx) * Math.min(1, dt * 2);
+        if (c.fade < 1) c.fade = Math.min(1, c.fade + dt * 0.8);
+        var wallO = c.side * Math.max(0, wr - c.size * 0.42);
+        c.o += (wallO - c.o) * Math.min(1, dt * 3);
+        var px0 = c.x;
+        c.x += c.vx * dt;
+        c.roll += c.side * (c.x - px0) / (c.size * 0.4);
+        continue;
+      }
+
       var r = Math.max(1, rad(c.x));
       var lane = c.o / r;
       var profile = 1 - 0.55 * lane * lane;               // parabolic flow profile
@@ -734,10 +864,22 @@
     // recycle cells that leave on the right, spawn on the left when there is room
     for (i = cells.length - 1; i >= 0; i--) if (cells[i].x > W + CS * 1.5) cells.splice(i, 1);
     var minX = 1e9;
-    for (i = 0; i < cells.length; i++) if (cells[i].x < minX) minX = cells[i].x;
+    for (i = 0; i < cells.length; i++) if (cells[i].type !== "wbc" && cells[i].x < minX) minX = cells[i].x;
     for (var k = 0; k < 2 && cells.length < targetCount && minX > CS * 0.35; k++) {
       cells.push(newCell(-CS * 0.6));
       minX = -CS * 0.6;
+    }
+    // every so often a white blood cell rolls in along the wall
+    if (spr3d.wbc) {
+      wbcTimer += dt;
+      if (wbcTimer > wbcNext && !hasWbc()) {
+        var first = !wbcSeen, nw = newCell(first ? rand(W * 0.38, W * 0.55) : -CS * 1.4, "wbc");
+        nw.fade = first ? 0 : 1;
+        wbcSeen = true;
+        cells.push(nw);
+        wbcTimer = 0;
+        wbcNext = rand(8, 14);
+      }
     }
 
     // plasma streaks
@@ -791,6 +933,8 @@
           var b = cells[j];
           if (b.x - a.x > reach) break;
           if (b.type === "plt" || Math.abs(a.z - b.z) > 0.55) continue;
+          // the white cell only blocks cells at its own depth; the rest pass in front of / behind it
+          if ((a.type === "wbc" || b.type === "wbc") && Math.abs(a.z - b.z) > 0.22) continue;
           var dx = b.x - a.x, dy = b.o - a.o, d = Math.sqrt(dx * dx + dy * dy) || 0.01;
           var min = (a.size + b.size) * 0.36;
           if (d >= min) continue;
@@ -857,6 +1001,17 @@
     var alpha = use3d ? 0.84 + c.z * 0.16 : 0.7 + c.z * 0.3;
     ctx.save();
     ctx.translate(x, y);
+
+    if (c.type === "wbc") {
+      if (spr3d.wbc) {
+        var wsz = c.size * 1.05;
+        ctx.rotate(ang);
+        ctx.globalAlpha = 0.97 * (c.fade == null ? 1 : c.fade);
+        ctx.drawImage(frameOf(spr3d.wbc, c.roll, Math.PI * 2), -wsz / 2, -wsz / 2, wsz, wsz);
+      }
+      ctx.restore();
+      return;
+    }
 
     if (c.type === "plt") {
       ctx.rotate(c.rot);
@@ -1043,7 +1198,8 @@
       ctx.lineWidth = 1.5;
       ctx.stroke();
       ctx.setLineDash([]);
-      var name = hovered.type === "plt" ? "Platelet"
+      var name = hovered.type === "wbc" ? "White blood cell (rolling along the wall)"
+        : hovered.type === "plt" ? "Platelet"
         : hovered.type === "rbc" ? "Healthy red blood cell"
         : hovered.lodged ? "Sickled cell: stuck" : "Sickled red blood cell";
       pill(name, hx, hy - hovered.size * 0.62 - 22, 1, false);
