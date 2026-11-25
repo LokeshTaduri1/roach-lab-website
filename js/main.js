@@ -485,11 +485,62 @@
       var data = {};
       fields.forEach(function (f) { data[f.name] = f.value.trim(); });
       var to = form.getAttribute("data-email");
-      var body = "Name: " + data.name + "\nEmail: " + data.email + (data.affiliation ? "\nAffiliation: " + data.affiliation : "") + "\n\n" + data.message;
-      window.location.href = "mailto:" + to + "?subject=" + encodeURIComponent("[Powell-Roach Lab] " + data.subject) + "&body=" + encodeURIComponent(body);
-      var ok2 = $(".form-success", form);
-      ok2.classList.add("show");
-      form.reset();
+      var subject = "[Powell-Roach Lab] " + data.subject + " inquiry from " + data.name;
+      var success = $(".form-success", form);
+      var failure = $(".form-failure", form);
+      var btn = $("button[type=submit]", form);
+      var honey = $("input[name=_honey]", form);
+      success.classList.remove("show");
+      if (failure) failure.classList.remove("show");
+
+      // Fallback: open the visitor's email app with everything pre-filled.
+      var openMailApp = function () {
+        var body = "Name: " + data.name + "\nEmail: " + data.email + (data.affiliation ? "\nAffiliation: " + data.affiliation : "") + "\nTopic: " + data.subject + "\n\n" + data.message;
+        window.location.href = "mailto:" + to + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+      };
+
+      var label = btn.innerHTML;
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+
+      // Send the submission straight to the lab inbox (FormSubmit relay, no backend needed).
+      fetch("https://formsubmit.co/ajax/" + encodeURIComponent(to), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({
+          "Name": data.name,
+          "Email": data.email,
+          "Affiliation": data.affiliation || "(not provided)",
+          "Topic": data.subject,
+          "Message": data.message,
+          "Sent from": window.location.href,
+          _replyto: data.email,
+          _subject: subject,
+          _template: "table",
+          _captcha: "false",
+          _honey: honey ? honey.value : ""
+        })
+      })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok || String(j.success) !== "true") throw new Error(j.message || "Send failed"); }); })
+        .then(function () {
+          success.classList.add("show");
+          form.reset();
+        })
+        .catch(function () {
+          if (failure) failure.classList.add("show");
+          openMailApp();
+        })
+        .then(function () {
+          btn.disabled = false;
+          btn.innerHTML = label;
+        });
     });
+
+    // Preselect the topic when arriving from a link like contact.html?topic=Joining%20the%20lab
+    var topic = new URLSearchParams(window.location.search).get("topic");
+    var topicSelect = $("#subject", form);
+    if (topic && topicSelect) {
+      Array.prototype.forEach.call(topicSelect.options, function (o) { if (o.text === topic) topicSelect.value = o.value || o.text; });
+    }
   }
 })();

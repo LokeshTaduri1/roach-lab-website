@@ -707,6 +707,13 @@ textarea.field { min-height: 140px; resize: vertical; }
   display: none; background: #e9f7ef; color: #1b6b3a; border-radius: 10px; padding: 14px 16px; margin-top: 16px; font-weight: 500;
 }
 .form-success.show { display: block; animation: fadeUp .4s var(--ease); }
+.form-failure {
+  display: none; background: #fdecec; color: #8a1c1c; border-radius: 10px; padding: 14px 16px; margin-top: 16px; font-weight: 500;
+}
+.form-failure.show { display: block; animation: fadeUp .4s var(--ease); }
+.form-failure a { color: inherit; text-decoration: underline; }
+#contact-form { position: relative; }
+#contact-form button[disabled] { opacity: .7; cursor: wait; }
 
 .accordion { border-top: 1px solid var(--line); }
 .acc-item { border-bottom: 1px solid var(--line); }
