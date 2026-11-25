@@ -354,7 +354,16 @@
   /* ---------- Publications ---------- */
   var pubList = $("#pub-list");
   if (pubList && window.PUBLICATIONS) {
-    var pubs = window.PUBLICATIONS.slice().sort(function (a, b) { return b.year - a.year; });
+    var pubs = window.PUBLICATIONS.map(function (p, i) {
+      var q = Object.assign({}, p);
+      if (!q.year) q.year = parseInt(String(q.date || "").slice(0, 4), 10);
+      q._order = i;
+      return q;
+    }).sort(function (a, b) {
+      // Newest first: compare full dates ("YYYY-MM-DD" or "YYYY-MM"), then keep file order.
+      var da = String(a.date || a.year), db = String(b.date || b.year);
+      return da < db ? 1 : da > db ? -1 : a._order - b._order;
+    });
     var searchEl = $("#pub-search"), yearEl = $("#pub-year"), topicEl = $("#pub-topic");
     var countEl = $("#pub-count"), emptyEl = $("#pub-empty");
 
@@ -385,16 +394,23 @@
       var html = "", current = null;
       filtered.forEach(function (p, i) {
         if (p.year !== current) { current = p.year; html += '<h2 class="pub-year">' + p.year + "</h2>"; }
-        var authors = hl(p.authors, q).replace(/((?:Powell-)?Roach K)/g, "<strong>$1</strong>");
+        var authors = hl(p.authors, q).replace(/\b((?:Powell-)?Roach K[A-Z]?)\b/g, "<strong>$1</strong>");
+        var pubmedUrl = p.pmid ? "https://pubmed.ncbi.nlm.nih.gov/" + encodeURIComponent(p.pmid) + "/" : p.pubmed;
+        var doiUrl = p.doi ? "https://doi.org/" + p.doi : "";
+        var mainUrl = doiUrl || pubmedUrl;
         var links = "";
-        if (p.doi) links += '<a href="https://doi.org/' + esc(p.doi) + '" target="_blank" rel="noopener">DOI</a>';
-        if (p.pubmed) links += '<a href="' + esc(p.pubmed) + '" target="_blank" rel="noopener">PubMed</a>';
+        if (doiUrl) links += '<a href="' + esc(doiUrl) + '" target="_blank" rel="noopener">Full article</a>';
+        if (pubmedUrl) links += '<a href="' + esc(pubmedUrl) + '" target="_blank" rel="noopener">PubMed</a>';
         if (p.pdf) links += '<a href="' + esc(p.pdf) + '" target="_blank" rel="noopener">PDF</a>';
+        if (p.type) links += '<span class="tag tag-type">' + esc(p.type) + "</span>";
         links += p.topics.map(function (tp) { return '<span class="tag">' + esc(tp) + "</span>"; }).join("");
+        var title = hl(p.title, q);
+        if (mainUrl) title = '<a href="' + esc(mainUrl) + '" target="_blank" rel="noopener">' + title + "</a>";
         html += '<article class="pub" style="animation-delay:' + Math.min(i * 40, 400) + 'ms"><span class="bar"></span><div>' +
-          "<h3>" + hl(p.title, q) + "</h3>" +
+          "<h3>" + title + "</h3>" +
           '<p class="authors">' + authors + "</p>" +
-          '<p class="journal">' + hl(p.journal, q) + "</p>" +
+          '<p class="journal">' + hl(p.journal, q) + (p.doi ? ' <span class="doi">doi: ' + esc(p.doi) + "</span>" : "") + "</p>" +
+          (p.note ? '<p class="pub-note">' + esc(p.note) + "</p>" : "") +
           '<div class="pub-links">' + links + "</div></div></article>";
       });
       pubList.innerHTML = html;

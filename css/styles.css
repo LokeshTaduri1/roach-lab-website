@@ -649,6 +649,11 @@ ul { padding-left: 1.2em; }
 .pub .pub-links { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .pub .pub-links a { font-size: .82rem; font-weight: 600; border: 1.5px solid var(--line); padding: 4px 12px; border-radius: 999px; }
 .pub .pub-links a:hover { border-color: var(--scarlet); }
+.pub h3 a { color: inherit; }
+.pub h3 a:hover { color: var(--scarlet); text-decoration: underline; }
+.pub .journal .doi { font-style: normal; color: var(--muted); font-size: .85rem; }
+.pub .pub-note { font-size: .88rem; color: var(--ink); margin: -4px 0 10px; }
+.pub .tag-type { background: var(--ink); color: #fff; }
 .empty { text-align: center; color: var(--muted); padding: 50px 0; display: none; }
 mark { background: #ffe1e8; color: inherit; border-radius: 3px; padding: 0 2px; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
