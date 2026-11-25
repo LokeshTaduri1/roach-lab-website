@@ -1,6 +1,6 @@
 # Powell-Roach Lab Website
 
-The website for the Powell-Roach Lab (Dr. Keesha Roach, Rutgers University), which studies sickle cell disease and pain.
+The website for the Powell-Roach Lab (Dr. Keesha Powell-Roach, Rutgers University), which studies sickle cell disease and pain.
 It is a static site written in plain HTML, CSS and JavaScript, with no build step. Open `index.html` in a browser to view it.
 
 ## Structure
@@ -26,7 +26,7 @@ assets/logo-full-dark.png Same, for dark backgrounds
 |---|---|
 | Lab email | done: `powell-roach_lab@sn.rutgers.edu` (footer, `team.html`, `contact.html` and the form's `data-email`) |
 | Phone | `contact.html` (address is done) |
-| Dr. Roach's official bio and CV link | `team.html` (`#pi` section) |
+| Dr. Powell-Roach's CV link (bio is done) | `team.html` (`#pi` section) |
 | Lab member photos | `assets/people/jeanene-barrett.jpg`, `ashley-iwu.jpg`, `lokesh-taduri.jpg`, `hyejin-jeon.jpg` (square crops; initials show until added) |
 | LinkedIn links | `team.html`: replace each `href="#"` on the LinkedIn links (the icon stays hidden until then) |
 | Research-interest blurbs | `team.html`: drafts, confirm with each person |
@@ -47,7 +47,7 @@ A missing file shows a "Group photo coming soon" placeholder. Wide landscape pho
 
 To replace an initials avatar with a photo, swap
 `<div class="avatar" aria-hidden="true">KR</div>` for
-`<img class="avatar" src="assets/people/roach.jpg" alt="Dr. Keesha Roach">` and add `object-fit: cover;` to `.avatar` in the CSS.
+`<img class="avatar" src="assets/people/roach.jpg" alt="Dr. Keesha Powell-Roach">` and add `object-fit: cover;` to `.avatar` in the CSS.
 
 ## Contact form
 

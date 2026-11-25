@@ -40,7 +40,7 @@
     { t: "Biobehavioral factors", u: "research.html#biobehavioral", k: "sleep stress mood depression anxiety coping fatigue resilience" },
     { t: "Patient-reported outcomes & digital health", u: "research.html#outcomes", k: "mobile app diary ema symptom tracking self-management digital" },
     { t: "Health equity & access to care", u: "research.html#equity", k: "stigma bias emergency department transition community advocacy" },
-    { t: "About the PI: Dr. Keesha Roach", u: "team.html#pi", k: "principal investigator professor keesha roach bio cv faculty" },
+    { t: "About the PI: Dr. Keesha Powell-Roach", u: "team.html#pi", k: "principal investigator professor keesha powell-roach roach bio education faculty nursing" },
     { t: "Lab members", u: "team.html#members", k: "team people members students coordinator graduate phd jeanene barrett ashley iwu lokesh taduri hyejin jeon" },
     { t: "Publications", u: "publications.html", k: "papers articles journal pubmed research output" },
     { t: "Join the lab", u: "join.html", k: "join positions opportunities undergraduate graduate phd postdoc apply jobs" },
