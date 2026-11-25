@@ -517,9 +517,6 @@ ul { padding-left: 1.2em; }
 .person-role { color: var(--scarlet); font-weight: 600; margin-bottom: 14px; }
 .person-body p { color: var(--muted); }
 .person-body p strong { color: var(--ink); }
-.person-edu-title { margin: 0 0 6px; }
-.person-edu { margin: 0 0 4px; padding-left: 18px; color: var(--muted); }
-.person-edu li { margin-bottom: 2px; }
 .person-links { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .person-links a { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: .95rem; color: var(--scarlet); }
 .person-links a:hover { color: var(--scarlet-dark); text-decoration: underline; }
