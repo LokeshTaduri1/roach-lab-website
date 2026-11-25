@@ -35,7 +35,7 @@
   var DPR = 1, W = 0, H = 0, mobile = false;
   var R0 = 100, CS = 30, xJam = 0, targetCount = 100;
   var vesselLayer = null, lumenPath = null, spr = null;
-  var cells = [], drawList = [], streaks = [], bokeh = [], ripples = [], rings = [];
+  var cells = [], drawList = [], streaks = [], bokeh = [], ripples = [], rings = [], motes = [], caustics = [];
   var mode = "crisis";
   var mouse = { x: -9999, y: -9999, active: false, energy: 0, lx: 0, ly: 0 };
   var hovered = null;
@@ -198,6 +198,271 @@
   }
 
   /* =========================================================
+     True 3-D cells
+     ---------------------------------------------------------
+     Each cell type is modelled as a real 3-D mesh:
+       • red blood cell – the biconcave disc (Evans–Fung shape)
+       • sickled cell   – a rigid, tapered crescent with HbS
+                          polymer-fibre striations
+       • platelet       – a lumpy discoid with granules
+     A tiny software rasterizer renders every mesh once, from every
+     tumble angle, with per-pixel lighting: key + fill light, glossy
+     specular, Fresnel rim light, and light transmission through the
+     cell's real thickness (so the thin centre glows paler than the
+     thick rim, as in real blood). Frames are generated in small idle
+     slices; until they are ready the painted sprites above are used.
+     ========================================================= */
+  var spr3d = { rbc: null, rbcSoft: null, sickle: null, plt: null, bokeh: null, bokehSickle: null };
+  var F3 = 144, SS3 = 2;
+
+  function norm3(v) { var l = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }
+  var L1 = norm3([-0.45, -0.62, 0.65]), L2 = norm3([0.75, 0.3, 0.35]);
+  var HV1 = norm3([L1[0], L1[1], L1[2] + 1]), HV2 = norm3([L2[0], L2[1], L2[2] + 1]);
+
+  function newMesh() { return { p: [], n: [], a: [], i: [] }; }
+  function seal(m) { return { p: new Float32Array(m.p), n: new Float32Array(m.n), a: new Float32Array(m.a), i: new Uint32Array(m.i) }; }
+  function gridIdx(m, base, rows, cols) {
+    for (var r = 0; r < rows - 1; r++) for (var c = 0; c < cols; c++) {
+      var c2 = (c + 1) % cols, a = base + r * cols + c, b = base + r * cols + c2, d = base + (r + 1) * cols + c, e = base + (r + 1) * cols + c2;
+      m.i.push(a, d, b, b, d, e);
+    }
+  }
+
+  // Half-thickness of a red blood cell at normalised radius r (units of cell radius)
+  function rbcH(r) { var q = 1 - r * r; return q <= 0 ? 0 : 0.5 * Math.sqrt(q) * (0.207 + 2.003 * r * r - 1.123 * r * r * r * r); }
+
+  function rbcMesh() {
+    var m = newMesh(), NR = 40, NP = 72;
+    [1, -1].forEach(function (s) {
+      var base = m.p.length / 3;
+      for (var k = 0; k <= NR; k++) {
+        var r = k === NR ? 1 : Math.sin((k / NR) * Math.PI / 2);
+        var h = rbcH(r), lo = Math.max(0, r - 1e-4), hi = Math.min(1, r + 1e-4);
+        var dh = k === NR ? 0 : (rbcH(hi) - rbcH(lo)) / (hi - lo);
+        for (var j = 0; j < NP; j++) {
+          var f = (j / NP) * Math.PI * 2, cs = Math.cos(f), sn = Math.sin(f);
+          m.p.push(r * cs, r * sn, s * h);
+          var nn = k === NR ? [cs, sn, 0] : norm3([-dh * cs, -dh * sn, s]);
+          m.n.push(nn[0], nn[1], nn[2]);
+          m.a.push(r, 0);
+        }
+      }
+      gridIdx(m, base, NR + 1, NP);
+    });
+    return seal(m);
+  }
+
+  function sickleMesh(v) {
+    var m = newMesh(), NT = 84, NS = 28, a0 = -v.span / 2;
+    var p0 = rand(0, 6), p1 = rand(0, 6), p2 = rand(0, 6);
+    for (var u = 0; u <= NT; u++) {
+      var t = 0.5 - 0.5 * Math.cos(Math.PI * u / NT), a = a0 + v.span * t;
+      var rx = Math.cos(a), ry = Math.sin(a);
+      var w = v.thick * Math.pow(Math.sin(Math.PI * t), v.pow);
+      var irr = 1 + v.noise * (Math.sin(t * 9 + p0) * 0.5 + Math.sin(t * 17 + p1) * 0.3 + Math.sin(t * 5 + p2) * 0.2);
+      var spike = v.spikes ? v.spikeAmp * Math.pow(Math.max(0, Math.sin(t * Math.PI * v.spikes)), 10) * Math.sin(Math.PI * t) : 0;
+      var wo = w * 0.55 * irr + spike, wi = w * 0.45 * (2 - irr);
+      var off = (wo - wi) / 2, aw = Math.max(1e-3, (wo + wi) / 2 * 1.12), bw = Math.max(1e-3, aw * 0.74);
+      for (var j = 0; j < NS; j++) {
+        var ps = (j / NS) * Math.PI * 2, cp = Math.cos(ps), sp = Math.sin(ps), rr = 1 + off + aw * cp;
+        // rotate 90° so the long axis is horizontal: (x, y) -> (y, -x)
+        m.p.push(rr * ry, -rr * rx, bw * sp);
+        var nn = norm3([rx * cp / aw, ry * cp / aw, sp / bw]);
+        m.n.push(nn[1], -nn[0], nn[2]);
+        m.a.push(t, Math.sin(5 * ps));
+      }
+    }
+    gridIdx(m, 0, NT + 1, NS);
+    // centre the shape on its bounding box
+    var minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9, i;
+    for (i = 0; i < m.p.length; i += 3) { minX = Math.min(minX, m.p[i]); maxX = Math.max(maxX, m.p[i]); minY = Math.min(minY, m.p[i + 1]); maxY = Math.max(maxY, m.p[i + 1]); }
+    var cx = (minX + maxX) / 2, cyy = (minY + maxY) / 2, ext = Math.max(maxX - minX, maxY - minY);
+    for (i = 0; i < m.p.length; i += 3) { m.p[i] = (m.p[i] - cx) / ext; m.p[i + 1] = (m.p[i + 1] - cyy) / ext; m.p[i + 2] /= ext; }
+    return seal(m);
+  }
+
+  function plateletMesh() {
+    var m = newMesh(), NA = 22, NB = 40, seed = rand(0, 6);
+    for (var i = 0; i <= NA; i++) {
+      var th = (i / NA) * Math.PI, st = Math.sin(th), ct = Math.cos(th);
+      for (var j = 0; j < NB; j++) {
+        var ph = (j / NB) * Math.PI * 2, dx = st * Math.cos(ph), dy = st * Math.sin(ph), dz = ct;
+        var r = 1 + 0.09 * Math.sin(3 * ph + seed) * st + 0.05 * Math.sin(5 * ph + 2 * th + seed);
+        m.p.push(dx * r, dy * r * 0.82, dz * r * 0.4);
+        var nn = norm3([dx, dy / 0.82, dz / 0.4]);
+        m.n.push(nn[0], nn[1], nn[2]);
+        var gr = Math.max(0, Math.sin(dx * 9 + seed) * Math.sin(dy * 8 + 1) * Math.sin(dz * 7 + 2));
+        m.a.push(gr, 0);
+      }
+    }
+    gridIdx(m, 0, NA + 1, NB);
+    return seal(m);
+  }
+
+  function rotX(t) { var c = Math.cos(t), s = Math.sin(t); return [1, 0, 0, 0, c, -s, 0, s, c]; }
+
+  // Software rasterizer: z-buffered triangles, front + back depth (for real
+  // thickness), interpolated normals, deferred per-pixel shading.
+  function rasterize(mesh, M, S, scale, shade) {
+    var nv = mesh.p.length / 3, P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), i, k, o = S / 2;
+    for (i = 0; i < nv; i++) {
+      var j = i * 3, x = mesh.p[j], y = mesh.p[j + 1], z = mesh.p[j + 2], nx = mesh.n[j], ny = mesh.n[j + 1], nz = mesh.n[j + 2];
+      P[j] = o + (M[0] * x + M[1] * y + M[2] * z) * scale;
+      P[j + 1] = o + (M[3] * x + M[4] * y + M[5] * z) * scale;
+      P[j + 2] = M[6] * x + M[7] * y + M[8] * z;
+      N[j] = M[0] * nx + M[1] * ny + M[2] * nz;
+      N[j + 1] = M[3] * nx + M[4] * ny + M[5] * nz;
+      N[j + 2] = M[6] * nx + M[7] * ny + M[8] * nz;
+    }
+    var SS = S * S, zf = new Float32Array(SS).fill(-1e9), zb = new Float32Array(SS).fill(1e9);
+    var bx = new Float32Array(SS), by = new Float32Array(SS), bz = new Float32Array(SS), ba = new Float32Array(SS), bb = new Float32Array(SS);
+    var I = mesh.i, A = mesh.a;
+    for (var t = 0; t < I.length; t += 3) {
+      var i0 = I[t] * 3, i1 = I[t + 1] * 3, i2 = I[t + 2] * 3;
+      var x0 = P[i0], y0 = P[i0 + 1], z0 = P[i0 + 2], x1 = P[i1], y1 = P[i1 + 1], z1 = P[i1 + 2], x2 = P[i2], y2 = P[i2 + 1], z2 = P[i2 + 2];
+      var area = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
+      if (area > -1e-9 && area < 1e-9) continue;
+      var inv = 1 / area;
+      var minX = Math.max(0, Math.floor(Math.min(x0, x1, x2))), maxX = Math.min(S - 1, Math.ceil(Math.max(x0, x1, x2)));
+      var minY = Math.max(0, Math.floor(Math.min(y0, y1, y2))), maxY = Math.min(S - 1, Math.ceil(Math.max(y0, y1, y2)));
+      var a0 = I[t] * 2, a1 = I[t + 1] * 2, a2 = I[t + 2] * 2;
+      for (var py = minY; py <= maxY; py++) {
+        var Y = py + 0.5;
+        for (var px = minX; px <= maxX; px++) {
+          var X = px + 0.5;
+          var w0 = ((x2 - x1) * (Y - y1) - (y2 - y1) * (X - x1)) * inv;
+          var w1 = ((x0 - x2) * (Y - y2) - (y0 - y2) * (X - x2)) * inv;
+          var w2 = 1 - w0 - w1;
+          if (w0 < -1e-5 || w1 < -1e-5 || w2 < -1e-5) continue;
+          k = py * S + px;
+          var zz = w0 * z0 + w1 * z1 + w2 * z2;
+          if (zz < zb[k]) zb[k] = zz;
+          if (zz > zf[k]) {
+            zf[k] = zz;
+            bx[k] = w0 * N[i0] + w1 * N[i1] + w2 * N[i2];
+            by[k] = w0 * N[i0 + 1] + w1 * N[i1 + 1] + w2 * N[i2 + 1];
+            bz[k] = w0 * N[i0 + 2] + w1 * N[i1 + 2] + w2 * N[i2 + 2];
+            ba[k] = w0 * A[a0] + w1 * A[a1] + w2 * A[a2];
+            bb[k] = w0 * A[a0 + 1] + w1 * A[a1 + 1] + w2 * A[a2 + 1];
+          }
+        }
+      }
+    }
+    var img = new ImageData(S, S), d = img.data, out = [0, 0, 0];
+    for (k = 0; k < SS; k++) {
+      if (zf[k] < -1e8) continue;
+      var lx = bx[k], ly = by[k], lz = bz[k], l = Math.sqrt(lx * lx + ly * ly + lz * lz) || 1;
+      shade(lx / l, ly / l, lz / l, zf[k] - zb[k], ba[k], bb[k], out);
+      d[k * 4] = out[0]; d[k * 4 + 1] = out[1]; d[k * 4 + 2] = out[2]; d[k * 4 + 3] = 255;
+    }
+    var c = makeCanvas(S, S);
+    c.getContext("2d").putImageData(img, 0, 0);
+    return c;
+  }
+
+  function wrapL(dp, w) { var v = (dp + w) / (1 + w); return v > 0 ? v : 0; }
+
+  // Physically-inspired cell material
+  function material(pal) {
+    return function (nx, ny, nz, thick, a0, a1, out) {
+      var ab = 1 - Math.exp(-pal.k * Math.max(thick, pal.minT));         // light absorbed through the cell
+      var r = pal.thin[0] + (pal.thick[0] - pal.thin[0]) * ab;
+      var g = pal.thin[1] + (pal.thick[1] - pal.thin[1]) * ab;
+      var b = pal.thin[2] + (pal.thick[2] - pal.thin[2]) * ab;
+      if (pal.tint) { var tw = pal.tint(a0, a1); r += (pal.tintC[0] - r) * tw; g += (pal.tintC[1] - g) * tw; b += (pal.tintC[2] - b) * tw; }
+      var d1 = nx * L1[0] + ny * L1[1] + nz * L1[2], d2 = nx * L2[0] + ny * L2[1] + nz * L2[2];
+      var diff = pal.amb + pal.kd * wrapL(d1, 0.35) + pal.kf * wrapL(d2, 0.5);
+      if (pal.ao) diff *= pal.ao(a0, a1);
+      var h1 = nx * HV1[0] + ny * HV1[1] + nz * HV1[2]; h1 = h1 > 0 ? h1 : 0;
+      var h2 = nx * HV2[0] + ny * HV2[1] + nz * HV2[2]; h2 = h2 > 0 ? h2 : 0;
+      var spec = pal.ks * Math.pow(h1, pal.gloss) + pal.sheen * Math.pow(h1, 8) + pal.ks * 0.25 * Math.pow(h2, pal.gloss * 0.6);
+      var fr = 1 - (nz > 0 ? nz : 0); fr = fr * fr * fr;
+      var tr = (1 - ab) * pal.glow;
+      r = r * diff + spec * 255 + fr * pal.rim[0] + tr * pal.glowC[0];
+      g = g * diff + spec * 245 + fr * pal.rim[1] + tr * pal.glowC[1];
+      b = b * diff + spec * 248 + fr * pal.rim[2] + tr * pal.glowC[2];
+      out[0] = r > 255 ? 255 : r; out[1] = g > 255 ? 255 : g; out[2] = b > 255 ? 255 : b;
+    };
+  }
+
+  var MAT_RBC = material({
+    thin: [255, 150, 160], thick: [150, 0, 28], k: 3.0, minT: 0.04,
+    amb: 0.28, kd: 0.85, kf: 0.25, ks: 0.5, gloss: 60, sheen: 0.09,
+    rim: [95, 55, 65], glow: 0.28, glowC: [255, 70, 95],
+    ao: function (r) { return 1 - 0.16 * (1 - smooth(0, 0.7, r)); }
+  });
+  var MAT_SICKLE = material({
+    thin: [178, 30, 78], thick: [78, 0, 34], k: 4.2, minT: 0.08,
+    amb: 0.26, kd: 0.85, kf: 0.22, ks: 0.34, gloss: 34, sheen: 0.07,
+    rim: [70, 24, 50], glow: 0.12, glowC: [170, 30, 85],
+    ao: function (t, fib) { return (0.93 + 0.07 * fib) * (0.97 + 0.03 * Math.sin(t * 37)); }
+  });
+  var MAT_PLT = material({
+    thin: [255, 238, 234], thick: [238, 172, 188], k: 2.0, minT: 0.05,
+    amb: 0.35, kd: 0.75, kf: 0.25, ks: 0.3, gloss: 30, sheen: 0.06,
+    rim: [60, 40, 50], glow: 0.1, glowC: [255, 200, 210],
+    tint: function (gr) { return Math.min(1, gr * gr * 4) * 0.38; }, tintC: [170, 90, 140]
+  });
+
+  // Downsample the supersampled render and bake a soft contact shadow under it
+  function finishSprite(big) {
+    var c = makeCanvas(F3, F3), g = c.getContext("2d");
+    g.imageSmoothingEnabled = true;
+    if ("imageSmoothingQuality" in g) g.imageSmoothingQuality = "high";
+    if ("filter" in g) {
+      g.save();
+      g.filter = "blur(" + (F3 * 0.03).toFixed(1) + "px) brightness(0)";
+      g.globalAlpha = 0.26;
+      g.drawImage(big, F3 * 0.012, F3 * 0.04, F3, F3);
+      g.restore();
+    }
+    g.drawImage(big, 0, 0, F3, F3);
+    return c;
+  }
+  function blurred(src, px) {
+    var c = makeCanvas(src.width, src.height), g = c.getContext("2d");
+    if ("filter" in g) g.filter = "blur(" + px + "px)";
+    g.drawImage(src, 0, 0);
+    return c;
+  }
+
+  function build3D() {
+    F3 = mobile ? 112 : 144;
+    var S = F3 * SS3, tasks = [], rbcM = null, pltM = null;
+    var N_RBC = 40, N_SICKLE = 16, N_PLT = 12;
+    var rbc = [], plt = [], sick = SICKLE_VARIANTS.map(function () { return []; });
+
+    tasks.push(function () { rbcM = rbcMesh(); });
+    for (var i = 0; i < N_RBC; i++) (function (i) {
+      tasks.push(function () { rbc[i] = finishSprite(rasterize(rbcM, rotX((i / N_RBC) * Math.PI), S, S * 0.4, MAT_RBC)); });
+    })(i);
+    tasks.push(function () {
+      spr3d.rbc = rbc;
+      spr3d.rbcSoft = rbc.map(function (c) { return blurred(c, F3 * 0.028); });
+      spr3d.bokeh = blurred(rbc[Math.round(N_RBC * 0.16)], F3 * 0.07);
+    });
+    SICKLE_VARIANTS.forEach(function (v, vi) {
+      var sm = null;
+      tasks.push(function () { sm = sickleMesh(v); });
+      for (var f = 0; f < N_SICKLE; f++) (function (f) {
+        tasks.push(function () { sick[vi][f] = finishSprite(rasterize(sm, rotX((f / N_SICKLE) * Math.PI * 2), S, S * 0.8, MAT_SICKLE)); });
+      })(f);
+    });
+    tasks.push(function () { spr3d.sickle = sick; spr3d.bokehSickle = blurred(sick[0][0], F3 * 0.07); });
+    tasks.push(function () { pltM = plateletMesh(); });
+    for (var p = 0; p < N_PLT; p++) (function (p) {
+      tasks.push(function () { plt[p] = finishSprite(rasterize(pltM, rotX((p / N_PLT) * Math.PI), S, S * 0.36, MAT_PLT)); });
+    })(p);
+    tasks.push(function () { spr3d.plt = plt; if (!running) draw(); });
+
+    (function pump() {
+      var t0 = performance.now();
+      while (tasks.length && performance.now() - t0 < 10) tasks.shift()();
+      if (tasks.length) setTimeout(pump, 0);
+    })();
+  }
+
+  /* =========================================================
      Vessel (static layer, rebuilt on resize)
      ========================================================= */
   function buildVessel() {
@@ -241,6 +506,20 @@
     g.fillStyle = wall;
     g.fill(band(11));
 
+    // layered fibres in the vessel wall (smooth muscle / elastic lamina)
+    [2.5, 5.5, 8.5].forEach(function (off, idx) {
+      [-1, 1].forEach(function (sd) {
+        g.beginPath();
+        xs.forEach(function (x, i) {
+          var y = cy(x) + sd * (rad(x) + off) + Math.sin(x * 0.045 + idx * 2.1 + sd) * 0.9;
+          if (i) g.lineTo(x, y); else g.moveTo(x, y);
+        });
+        g.strokeStyle = idx % 2 ? "rgba(255,255,255,0.32)" : "rgba(196,52,88,0.2)";
+        g.lineWidth = idx === 1 ? 1.2 : 0.9;
+        g.stroke();
+      });
+    });
+
     // lumen (plasma)
     var lumen = band(0);
     var lg = g.createLinearGradient(0, 0, 0, H);
@@ -250,9 +529,44 @@
     g.fillStyle = lg;
     g.fill(lumen);
 
-    // inner wall shading
     g.save(); g.clip(lumen);
-    g.strokeStyle = "rgba(190,20,60,0.16)"; g.lineWidth = 16; g.stroke(lumen);
+    // endothelial lining: a faint cobblestone of elongated cells on the back wall,
+    // compressed toward the edges where the tube curves away from us
+    for (var ex = -20; ex < W + 20; ex += mobile ? 20 : 24) {
+      var er = rad(ex), ecy = cy(ex), esl = Math.atan(slope(ex));
+      for (var row = -0.9; row <= 0.91; row += 0.3) {
+        var squeeze = Math.sqrt(Math.max(0.05, 1 - row * row));
+        g.save();
+        g.translate(ex + rand(-7, 7) + row * 6, ecy + row * er + rand(-2, 2) * squeeze);
+        g.rotate(esl + rand(-0.08, 0.08));
+        g.beginPath();
+        g.ellipse(0, 0, rand(9, 13) * (mobile ? 0.85 : 1), Math.max(1.2, er * 0.13 * squeeze), 0, 0, Math.PI * 2);
+        g.fillStyle = "rgba(255,255,255,0.06)"; g.fill();
+        g.strokeStyle = "rgba(205,80,110,0.045)"; g.lineWidth = 0.8; g.stroke();
+        g.beginPath();
+        g.ellipse(rand(-2, 2), 0, 2.2, Math.max(0.8, 1.4 * squeeze), 0, 0, Math.PI * 2);
+        g.fillStyle = "rgba(190,60,95,0.09)"; g.fill();
+        g.restore();
+      }
+    }
+    // cylindrical tube lighting: a soft highlight running along the upper-middle of the lumen
+    var hl = makeCanvas(c.width, c.height), hg = hl.getContext("2d");
+    hg.scale(DPR, DPR); hg.lineCap = "round"; hg.strokeStyle = "#ffffff";
+    for (var sx = -40; sx < W + 40; sx += 6) {
+      hg.lineWidth = rad(sx) * 0.75;
+      hg.beginPath();
+      hg.moveTo(sx, cy(sx) - rad(sx) * 0.22);
+      hg.lineTo(sx + 6, cy(sx + 6) - rad(sx + 6) * 0.22);
+      hg.stroke();
+    }
+    g.save();
+    if ("filter" in g) g.filter = "blur(" + Math.round(R0 * 0.3) + "px)";
+    g.globalAlpha = "filter" in g ? 0.5 : 0.18;
+    g.drawImage(hl, 0, 0, W, H);
+    g.restore();
+    // inner wall shading (deeper toward the walls)
+    g.strokeStyle = "rgba(190,20,60,0.10)"; g.lineWidth = 30; g.stroke(lumen);
+    g.strokeStyle = "rgba(190,20,60,0.14)"; g.lineWidth = 12; g.stroke(lumen);
     g.restore();
 
     // wall highlight
@@ -297,6 +611,12 @@
     for (var i = 0; i < targetCount; i++) cells.push(newCell(rand(-CS, W)));
     streaks = [];
     for (var s = 0; s < (mobile ? 16 : 34); s++) streaks.push({ x: rand(0, W), o: rand(-0.85, 0.85), len: rand(24, 70), k: rand(1.2, 1.9) });
+    // tiny plasma particles (proteins, micro-bubbles of light) at different depths
+    motes = [];
+    for (var m = 0; m < (mobile ? 34 : 80); m++) motes.push({ x: rand(0, W), o: rand(-0.95, 0.95), r: rand(0.5, 1.9), a: rand(0.2, 0.6), k: rand(0.75, 1.25), ph: rand(0, 6) });
+    // soft light caustics drifting through the vessel
+    caustics = [];
+    for (var q = 0; q < (mobile ? 2 : 4); q++) caustics.push({ x: rand(0, W), o: rand(-0.45, 0.35), s: rand(0.7, 1.3), k: rand(0.25, 0.5) });
     bokeh = [];
     for (var b = 0; b < (mobile ? 4 : 8); b++) {
       bokeh.push({ x: rand(W * 0.35, W), y: rand(0, H), s: rand(40, 100), a: rand(0.08, 0.16), vy: rand(-6, 6), vx: rand(-4, 4), sick: Math.random() < 0.3, r: rand(0, 6) });
@@ -308,6 +628,7 @@
     c.lodged = true;
     c.vx = 0;
     c.lodgeAngle = rand(-1.25, 1.25);
+    c.lodgeRoll = c.tilt * 0.45;
     lodgedCount++;
   }
 
@@ -426,6 +747,18 @@
       s.x += bs * s.k * sl * dt;
       if (s.x - s.len > W) { s.x = -rand(0, 80); s.o = rand(-0.85, 0.85); }
     }
+    for (i = 0; i < motes.length; i++) {
+      var mo = motes[i], mr = Math.max(1, rad(mo.x));
+      var ms = (mo.x < xJam ? 1 - 0.9 * block : 1 - 0.7 * block) * (1 - 0.5 * mo.o * mo.o) * (1 + (R0 / mr - 1) * 0.3);
+      mo.x += bs * mo.k * ms * dt;
+      mo.ph += dt * 1.7;
+      if (mo.x > W + 10) { mo.x = -rand(0, 40); mo.o = rand(-0.95, 0.95); }
+    }
+    for (i = 0; i < caustics.length; i++) {
+      var cq = caustics[i];
+      cq.x += bs * cq.k * (1 - 0.6 * block) * dt;
+      if (cq.x - R0 * 2 > W) { cq.x = -R0 * 2; cq.o = rand(-0.45, 0.35); cq.s = rand(0.7, 1.3); }
+    }
     // background bokeh
     for (i = 0; i < bokeh.length; i++) {
       var b = bokeh[i];
@@ -512,37 +845,61 @@
     ctx.restore();
   }
 
+  // pick the pre-rendered 3-D frame that matches an orientation angle
+  function frameOf(arr, angle, period) {
+    var n = arr.length, a = ((angle % period) + period) % period;
+    return arr[Math.floor((a / period) * n) % n];
+  }
+
   function drawCell(c) {
     var x = c.x, y = cy(x) + c.o, ang = Math.atan(slope(x));
-    var alpha = 0.7 + c.z * 0.3;
+    var use3d = !!spr3d.rbc;
+    var alpha = use3d ? 0.84 + c.z * 0.16 : 0.7 + c.z * 0.3;
     ctx.save();
     ctx.translate(x, y);
 
     if (c.type === "plt") {
       ctx.rotate(c.rot);
       ctx.globalAlpha = 0.95;
-      ctx.drawImage(spr.plt, -c.size / 2, -c.size / 2, c.size, c.size);
+      if (spr3d.plt) { var ps = c.size * 1.25; ctx.drawImage(frameOf(spr3d.plt, c.tilt * 0.6, Math.PI), -ps / 2, -ps / 2, ps, ps); }
+      else ctx.drawImage(spr.plt, -c.size / 2, -c.size / 2, c.size, c.size);
       ctx.restore();
       return;
     }
 
     var h = c.heal > 0 ? c.heal : 0;
     if (c.type === "rbc" || h > 0) {
-      var tilt = 0.32 + 0.68 * Math.abs(Math.cos(c.tilt)); // 3-D tumbling
       var sz = c.size * (h > 0 ? 0.6 + 0.4 * h : 1);
       ctx.save();
-      ctx.rotate(ang + c.rot);
-      ctx.scale(1, tilt);
       ctx.globalAlpha = alpha * (c.type === "rbc" ? 1 : h);
-      ctx.drawImage(spr.rbc, -sz / 2, -sz / 2, sz, sz);
+      if (use3d) {
+        ctx.rotate(ang);
+        // red cells are flexible: they stretch along the flow as they squeeze through the narrowing
+        var sq = clamp((R0 / Math.max(1, rad(x)) - 1) * 0.12, 0, 0.16);
+        if (sq > 0.005) ctx.scale(1 + sq, 1 - sq * 0.8);
+        ctx.rotate(c.rot);
+        var set = c.z < 0.2 && spr3d.rbcSoft ? spr3d.rbcSoft : spr3d.rbc;   // depth of field for far cells
+        ctx.drawImage(frameOf(set, c.tilt, Math.PI), -sz / 2, -sz / 2, sz, sz);
+      } else {
+        var tilt = 0.32 + 0.68 * Math.abs(Math.cos(c.tilt));
+        ctx.rotate(ang + c.rot);
+        ctx.scale(1, tilt);
+        ctx.drawImage(spr.rbc, -sz / 2, -sz / 2, sz, sz);
+      }
       ctx.restore();
     }
     if (c.type === "sickle") {
       var s = c.size * 1.32;
-      ctx.rotate(ang + (c.lodged ? c.lodgeAngle : c.rot * 0.5));
-      ctx.scale(c.flip, 1);
+      // stuck cells tremble under the pressure of the cells piling up behind them
+      var jit = c.lodged ? Math.sin(time * 11 + c.z * 40) * 0.025 * block : 0;
+      ctx.rotate(ang + (c.lodged ? c.lodgeAngle : c.rot * 0.5) + jit);
       ctx.globalAlpha = alpha * (1 - h);
-      ctx.drawImage(spr.sickle[c.variant], -s / 2, -s / 2, s, s);
+      if (spr3d.sickle) {
+        ctx.drawImage(frameOf(spr3d.sickle[c.variant], c.lodged ? c.lodgeRoll : c.tilt * 0.45, Math.PI * 2), -s / 2, -s / 2, s, s);
+      } else {
+        ctx.scale(c.flip, 1);
+        ctx.drawImage(spr.sickle[c.variant], -s / 2, -s / 2, s, s);
+      }
     }
     ctx.restore();
   }
@@ -557,7 +914,8 @@
       ctx.save();
       ctx.globalAlpha = b.a;
       ctx.translate(b.x, b.y); ctx.rotate(b.r);
-      ctx.drawImage(b.sick ? spr.sickleBlur : spr.rbcBlur, -b.s / 2, -b.s / 2, b.s, b.s);
+      var bimg = b.sick ? (spr3d.bokehSickle || spr.sickleBlur) : (spr3d.bokeh || spr.rbcBlur);
+      ctx.drawImage(bimg, -b.s / 2, -b.s / 2, b.s, b.s);
       ctx.restore();
     }
 
@@ -587,9 +945,38 @@
     }
     ctx.stroke();
 
+    // drifting light caustics
+    for (i = 0; i < caustics.length; i++) {
+      var cq = caustics[i], cqr = rad(cq.x) * cq.s, cqy = cy(cq.x) + cq.o * rad(cq.x);
+      var cg = ctx.createRadialGradient(cq.x, cqy, 0, cq.x, cqy, cqr);
+      cg.addColorStop(0, "rgba(255,255,255,0.22)");
+      cg.addColorStop(0.5, "rgba(255,240,244,0.08)");
+      cg.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = cg;
+      ctx.fillRect(cq.x - cqr, cqy - cqr, cqr * 2, cqr * 2);
+    }
+    // plasma particles behind the cells
+    for (i = 0; i < motes.length; i++) {
+      var mo = motes[i];
+      if (mo.r > 1.3) continue;
+      ctx.globalAlpha = mo.a * (0.7 + 0.3 * Math.sin(mo.ph));
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(mo.x, cy(mo.x) + mo.o * rad(mo.x), mo.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
     // cells, back to front
     drawList = cells.slice().sort(function (a, b) { return a.z - b.z; });
     for (i = 0; i < drawList.length; i++) drawCell(drawList[i]);
+    // larger plasma particles in front of the cells (parallax depth)
+    for (i = 0; i < motes.length; i++) {
+      var mf = motes[i];
+      if (mf.r <= 1.3) continue;
+      ctx.globalAlpha = mf.a * 0.8 * (0.7 + 0.3 * Math.sin(mf.ph));
+      ctx.fillStyle = "#fff6f8";
+      ctx.beginPath(); ctx.arc(mf.x, cy(mf.x) + mf.o * rad(mf.x), mf.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
     ctx.restore();
 
     var jx = xJam, jy = cy(xJam), jr = rad(xJam);
@@ -778,7 +1165,8 @@
   resize();
   if (reduceMotion) presimulate(900);
   else { presimulate(90); start(); }
+  build3D();
 
   // Debug/screenshot hook: window.__bloodflow.sim(seconds)
-  window.__bloodflow = { sim: function (sec) { presimulate(Math.round(sec * 60)); }, setMode: setMode };
+  window.__bloodflow = { sim: function (sec) { presimulate(Math.round(sec * 60)); }, setMode: setMode, sprites: function () { return spr3d; } };
 })();
