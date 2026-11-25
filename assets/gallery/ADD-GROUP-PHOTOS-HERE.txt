@@ -1,0 +1,12 @@
+Group photos in this folder:
+  group-1.jpg, group-2.jpg, group-3.jpg
+
+- All three appear in the full-width slider on the HOME page (above 'About the lab').
+- group-1.jpg is also the big banner photo at the top of the JOIN THE LAB page.
+
+On big screens each photo sits in the centre (up to 1200px wide) with a blurred copy filling both sides.
+Keep the file name in the strip-bg style the same as the img src. To change which part stays in view, edit the
+object-position % on its img in index.html (lower % = show more of the top).
+Resize large phone photos to about 1600-1920 px on the long side before adding them.
+Edit captions in index.html (search for 'strip-slide').
+To add another photo, copy one <figure class="strip-slide"> block in index.html.

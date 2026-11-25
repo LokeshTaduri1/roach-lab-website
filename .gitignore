@@ -1,0 +1,11 @@
+# Original full-size phone photos (resized copies live in assets/gallery)
+IMG_*.jpeg
+IMG_*.jpg
+IMG_*.JPG
+*.HEIC
+
+# Screenshots and OS files
+Screenshot*.png
+Thumbs.db
+desktop.ini
+.DS_Store
