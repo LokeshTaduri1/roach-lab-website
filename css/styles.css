@@ -557,6 +557,21 @@ body.menu-open::after { opacity: 1; visibility: visible; pointer-events: auto; t
   .person--pi { --photo: 180px; }
   .person-body h3, .person--pi .person-body h3 { font-size: 1.2rem; }
 }
+/* Phones: photo + name/title side by side, description runs full width below,
+   so the text isn't squeezed into a narrow, very tall column. */
+@media (max-width: 600px) {
+  .person { grid-template-columns: var(--photo) 1fr; grid-template-rows: 1fr auto auto 1fr; column-gap: 16px; row-gap: 0; }
+  .person-body { display: contents; }
+  .person-photo { grid-column: 1; grid-row: 1 / 5; }
+  .person-body > h3 { grid-column: 2; grid-row: 2; margin: 0 0 4px; }
+  .person-body > .person-role { grid-column: 2; grid-row: 3; margin: 0; font-size: .92rem; line-height: 1.45; }
+  .person-body > :not(h3):not(.person-role) { grid-column: 1 / -1; }
+  .person-body > p:not(.person-role) { margin: 0 0 10px; font-size: .95rem; }
+  .person-body > .person-role + p { margin-top: 16px; }
+  .person-body > .person-links { margin-top: 6px; }
+  .person-body > p:not(.person-role) { line-height: 1.6; }
+  .hide-phone { display: none; }
+}
 @media (max-width: 420px) {
   .person { --photo: 130px; gap: 14px; }
   .person--pi { --photo: 145px; }
