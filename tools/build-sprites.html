@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Build cell sprites</title></head>
+<body>
+<!-- Build tool: renders the 3-D cell frames and prints them as WebP data URLs.
+     Run tools/build-sprites.ps1, which saves them to assets/cells/. -->
+<pre id="out"></pre>
+<script src="cell-renderer.js"></script>
+<script>
+  var sheets = window.CellRenderer.build(), out = {};
+  Object.keys(sheets).forEach(function (k) { out[k] = sheets[k].toDataURL("image/webp", 0.9); });
+  document.getElementById("out").textContent = "BEGIN" + JSON.stringify(out) + "END";
+</script>
+</body>
+</html>
